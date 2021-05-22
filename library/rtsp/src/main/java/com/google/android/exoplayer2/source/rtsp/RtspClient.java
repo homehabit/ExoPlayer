@@ -39,6 +39,7 @@ import android.os.Handler;
 import android.util.SparseArray;
 import androidx.annotation.Nullable;
 import com.google.android.exoplayer2.C;
+import com.google.android.exoplayer2.MediaItem;
 import com.google.android.exoplayer2.ParserException;
 import com.google.android.exoplayer2.source.rtsp.RtspMediaPeriod.RtpLoadInfo;
 import com.google.android.exoplayer2.source.rtsp.RtspMediaSource.RtspPlaybackException;
@@ -89,6 +90,7 @@ import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
   }
 
   private final SessionInfoListener sessionInfoListener;
+  private final MediaItem.PlaybackProperties playbackProperties;
   private final Uri uri;
   @Nullable private final String userAgent;
   private final ArrayDeque<RtpLoadInfo> pendingSetupRtpLoadInfos;
@@ -116,11 +118,12 @@ import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
    * @param sessionInfoListener The {@link SessionInfoListener}.
    * @param userAgent The user agent that will be used if needed, or {@code null} for the fallback
    *     to use the default user agent of the underlying platform.
-   * @param uri The RTSP playback URI.
+   * @param playbackProperties The {@link com.google.android.exoplayer2.MediaItem.PlaybackProperties} of the media stream.
    */
-  public RtspClient(SessionInfoListener sessionInfoListener, @Nullable String userAgent, Uri uri) {
+  public RtspClient(SessionInfoListener sessionInfoListener, @Nullable String userAgent, MediaItem.PlaybackProperties playbackProperties) {
     this.sessionInfoListener = sessionInfoListener;
-    this.uri = RtspMessageUtil.removeUserInfo(uri);
+    this.playbackProperties = playbackProperties;
+    this.uri = RtspMessageUtil.removeUserInfo(playbackProperties.uri);
     this.userAgent = userAgent;
     pendingSetupRtpLoadInfos = new ArrayDeque<>();
     pendingRequests = new SparseArray<>();
@@ -334,6 +337,8 @@ import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
       }
 
       headersBuilder.addAll(additionalHeaders);
+      headersBuilder.addAll(playbackProperties.headers);
+
       return new RtspRequest(uri, method, headersBuilder.build(), /* messageBody= */ "");
     }
 

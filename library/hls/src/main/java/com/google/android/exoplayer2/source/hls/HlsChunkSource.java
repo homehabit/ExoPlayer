@@ -26,6 +26,7 @@ import androidx.annotation.Nullable;
 import androidx.annotation.VisibleForTesting;
 import com.google.android.exoplayer2.C;
 import com.google.android.exoplayer2.Format;
+import com.google.android.exoplayer2.MediaItem;
 import com.google.android.exoplayer2.source.BehindLiveWindowException;
 import com.google.android.exoplayer2.source.TrackGroup;
 import com.google.android.exoplayer2.source.chunk.BaseMediaChunkIterator;
@@ -125,6 +126,7 @@ import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
   private final Uri[] playlistUrls;
   private final Format[] playlistFormats;
   private final HlsPlaylistTracker playlistTracker;
+  private final MediaItem.PlaybackProperties playbackProperties;
   private final TrackGroup trackGroup;
   @Nullable private final List<Format> muxedCaptionFormats;
   private final FullSegmentEncryptionKeyCache keyCache;
@@ -149,6 +151,7 @@ import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
    * @param playlistUrls The {@link Uri}s of the media playlists that can be adapted between by this
    *     chunk source.
    * @param playlistFormats The {@link Format Formats} corresponding to the media playlists.
+   * @param playbackProperties Playback data for the media item being played.
    * @param dataSourceFactory An {@link HlsDataSourceFactory} to create {@link DataSource}s for the
    *     chunks.
    * @param mediaTransferListener The transfer listener which should be informed of any media data
@@ -164,6 +167,7 @@ import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
       HlsPlaylistTracker playlistTracker,
       Uri[] playlistUrls,
       Format[] playlistFormats,
+      MediaItem.PlaybackProperties playbackProperties,
       HlsDataSourceFactory dataSourceFactory,
       @Nullable TransferListener mediaTransferListener,
       TimestampAdjusterProvider timestampAdjusterProvider,
@@ -172,6 +176,7 @@ import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
     this.playlistTracker = playlistTracker;
     this.playlistUrls = playlistUrls;
     this.playlistFormats = playlistFormats;
+    this.playbackProperties = playbackProperties;
     this.timestampAdjusterProvider = timestampAdjusterProvider;
     this.muxedCaptionFormats = muxedCaptionFormats;
     keyCache = new FullSegmentEncryptionKeyCache(KEY_CACHE_SIZE);
@@ -446,6 +451,7 @@ import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
             mediaPlaylist,
             segmentBaseHolder,
             selectedPlaylistUrl,
+            playbackProperties,
             muxedCaptionFormats,
             trackSelection.getSelectionReason(),
             trackSelection.getSelectionData(),
@@ -768,7 +774,10 @@ import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
       return null;
     }
     DataSpec dataSpec =
-        new DataSpec.Builder().setUri(keyUri).setFlags(DataSpec.FLAG_ALLOW_GZIP).build();
+        new DataSpec.Builder()
+            .setUri(keyUri)
+            .setHttpRequestHeaders(playbackProperties.headers)
+            .setFlags(DataSpec.FLAG_ALLOW_GZIP).build();
     return new EncryptionKeyChunk(
         encryptionDataSource,
         dataSpec,

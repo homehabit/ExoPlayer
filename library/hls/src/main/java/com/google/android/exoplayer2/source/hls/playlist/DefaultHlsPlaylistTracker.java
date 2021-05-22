@@ -24,6 +24,7 @@ import android.os.Handler;
 import android.os.SystemClock;
 import androidx.annotation.Nullable;
 import com.google.android.exoplayer2.C;
+import com.google.android.exoplayer2.MediaItem;
 import com.google.android.exoplayer2.ParserException;
 import com.google.android.exoplayer2.source.LoadEventInfo;
 import com.google.android.exoplayer2.source.MediaLoadData;
@@ -34,6 +35,7 @@ import com.google.android.exoplayer2.source.hls.playlist.HlsMediaPlaylist.Part;
 import com.google.android.exoplayer2.source.hls.playlist.HlsMediaPlaylist.RenditionReport;
 import com.google.android.exoplayer2.source.hls.playlist.HlsMediaPlaylist.Segment;
 import com.google.android.exoplayer2.upstream.DataSource;
+import com.google.android.exoplayer2.upstream.DataSpec;
 import com.google.android.exoplayer2.upstream.HttpDataSource;
 import com.google.android.exoplayer2.upstream.LoadErrorHandlingPolicy;
 import com.google.android.exoplayer2.upstream.LoadErrorHandlingPolicy.LoadErrorInfo;
@@ -47,6 +49,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 /** Default implementation for {@link HlsPlaylistTracker}. */
 public final class DefaultHlsPlaylistTracker
@@ -63,6 +66,7 @@ public final class DefaultHlsPlaylistTracker
 
   private final HlsDataSourceFactory dataSourceFactory;
   private final HlsPlaylistParserFactory playlistParserFactory;
+  private final MediaItem.PlaybackProperties playbackProperties;
   private final LoadErrorHandlingPolicy loadErrorHandlingPolicy;
   private final HashMap<Uri, MediaPlaylistBundle> playlistBundles;
   private final List<PlaylistEventListener> listeners;
@@ -87,10 +91,12 @@ public final class DefaultHlsPlaylistTracker
    */
   public DefaultHlsPlaylistTracker(
       HlsDataSourceFactory dataSourceFactory,
+      MediaItem.PlaybackProperties playbackProperties,
       LoadErrorHandlingPolicy loadErrorHandlingPolicy,
       HlsPlaylistParserFactory playlistParserFactory) {
     this(
         dataSourceFactory,
+        playbackProperties,
         loadErrorHandlingPolicy,
         playlistParserFactory,
         DEFAULT_PLAYLIST_STUCK_TARGET_DURATION_COEFFICIENT);
@@ -109,10 +115,12 @@ public final class DefaultHlsPlaylistTracker
    */
   public DefaultHlsPlaylistTracker(
       HlsDataSourceFactory dataSourceFactory,
+      MediaItem.PlaybackProperties playbackProperties,
       LoadErrorHandlingPolicy loadErrorHandlingPolicy,
       HlsPlaylistParserFactory playlistParserFactory,
       double playlistStuckTargetDurationCoefficient) {
     this.dataSourceFactory = dataSourceFactory;
+    this.playbackProperties = playbackProperties;
     this.playlistParserFactory = playlistParserFactory;
     this.loadErrorHandlingPolicy = loadErrorHandlingPolicy;
     this.playlistStuckTargetDurationCoefficient = playlistStuckTargetDurationCoefficient;
@@ -126,6 +134,7 @@ public final class DefaultHlsPlaylistTracker
   @Override
   public void start(
       Uri initialPlaylistUri,
+      Map<String, String> headers,
       EventDispatcher eventDispatcher,
       PrimaryPlaylistListener primaryPlaylistListener) {
     this.playlistRefreshHandler = Util.createHandlerForCurrentLooper();
@@ -134,7 +143,10 @@ public final class DefaultHlsPlaylistTracker
     ParsingLoadable<HlsPlaylist> masterPlaylistLoadable =
         new ParsingLoadable<>(
             dataSourceFactory.createDataSource(C.DATA_TYPE_MANIFEST),
-            initialPlaylistUri,
+            new DataSpec.Builder()
+                .setUri(initialPlaylistUri)
+                .setHttpRequestHeaders(headers)
+                .build(),
             C.DATA_TYPE_MANIFEST,
             playlistParserFactory.createPlaylistParser());
     Assertions.checkState(initialPlaylistLoader == null);

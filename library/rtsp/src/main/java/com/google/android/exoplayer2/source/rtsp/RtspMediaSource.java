@@ -161,7 +161,7 @@ public final class RtspMediaSource extends BaseMediaSource {
           new RtspClient(
               new SessionInfoListenerImpl(),
               /* userAgent= */ VERSION_SLASHY,
-              mediaItem.playbackProperties.uri);
+              mediaItem.playbackProperties);
       rtspClient.start();
     } catch (IOException e) {
       sourcePrepareException = new RtspPlaybackException("RtspClient not opened.", e);
