@@ -83,6 +83,8 @@ import java.util.regex.Pattern;
 
   private static final String RTSP_VERSION = "RTSP/1.0";
 
+  private static final Pattern HEADER_W3_AUTHENTICATE_PATTERN = Pattern.compile("(\\S+)\\s+(.+)", Pattern.CASE_INSENSITIVE);
+
   /**
    * Serializes an {@link RtspRequest} to an {@link ImmutableList} of strings.
    *
@@ -341,6 +343,33 @@ import java.util.regex.Pattern;
     }
 
     return new RtspSessionHeader(sessionId, timeoutMs);
+  }
+
+  /**
+   * Parses the RTSP WWW-Authenticate Digest header.
+   *
+   * @param w3AuthenticateHeader The WWW-Authenticate header content, null if not available.
+   * @return The string of parameters, or null if the WWW-Authenticate header is null.
+   */
+  @Nullable
+  public static String parseW3AuthenticateDigestHeader(@Nullable String w3AuthenticateHeader) throws ParserException {
+    if (w3AuthenticateHeader == null) {
+      return null;
+    }
+
+    Matcher matcher = HEADER_W3_AUTHENTICATE_PATTERN.matcher(w3AuthenticateHeader);
+
+    if (matcher.find()) {
+      if ("Digest".equals(matcher.group(1))) {
+        return matcher.group(2);
+      }
+      else {
+        throw new ParserException("Invalid WWW-Authenticate Digest header: " + w3AuthenticateHeader);
+      }
+    }
+    else {
+      throw new ParserException("Unable to parse WWW-Authenticate Digest header: " + w3AuthenticateHeader);
+    }
   }
 
   private static String getRtspStatusReasonPhrase(int statusCode) {

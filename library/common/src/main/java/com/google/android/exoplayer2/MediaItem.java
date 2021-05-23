@@ -80,6 +80,8 @@ public final class MediaItem implements Bundleable {
     @Nullable private byte[] drmKeySetId;
     private List<StreamKey> streamKeys;
     private Map<String, String> headers;
+    @Nullable private String username;
+    @Nullable private String password;
     @Nullable private String customCacheKey;
     private List<Subtitle> subtitles;
     @Nullable private Uri adTagUri;
@@ -128,6 +130,8 @@ public final class MediaItem implements Bundleable {
         uri = playbackProperties.uri;
         streamKeys = playbackProperties.streamKeys;
         headers = playbackProperties.headers;
+        username = playbackProperties.username;
+        password = playbackProperties.password;
         subtitles = playbackProperties.subtitles;
         tag = playbackProperties.tag;
         @Nullable DrmConfiguration drmConfiguration = playbackProperties.drmConfiguration;
@@ -412,6 +416,16 @@ public final class MediaItem implements Bundleable {
       return this;
     }
 
+    public Builder setUsername(@Nullable String username) {
+      this.username = username;
+      return this;
+    }
+
+    public Builder setPassword(@Nullable String password) {
+      this.password = password;
+      return this;
+    }
+
     /**
      * Sets the optional custom cache key (only used for progressive streams).
      *
@@ -604,6 +618,8 @@ public final class MediaItem implements Bundleable {
                 adTagUri != null ? new AdsConfiguration(adTagUri, adsId) : null,
                 streamKeys,
                 headers,
+                username,
+                password,
                 customCacheKey,
                 subtitles,
                 tag);
@@ -796,6 +812,10 @@ public final class MediaItem implements Bundleable {
     /** Optional headers to be included in requests */
     public final Map<String, String> headers;
 
+    @Nullable public final String username;
+
+    @Nullable public final String password;
+
     /** Optional custom cache key (only used for progressive streams). */
     @Nullable public final String customCacheKey;
 
@@ -816,6 +836,8 @@ public final class MediaItem implements Bundleable {
         @Nullable AdsConfiguration adsConfiguration,
         List<StreamKey> streamKeys,
         Map<String, String> headers,
+        @Nullable String username,
+        @Nullable String password,
         @Nullable String customCacheKey,
         List<Subtitle> subtitles,
         @Nullable Object tag) {
@@ -825,6 +847,8 @@ public final class MediaItem implements Bundleable {
       this.adsConfiguration = adsConfiguration;
       this.streamKeys = streamKeys;
       this.headers = headers;
+      this.username = username;
+      this.password = password;
       this.customCacheKey = customCacheKey;
       this.subtitles = subtitles;
       this.tag = tag;
@@ -846,6 +870,8 @@ public final class MediaItem implements Bundleable {
           && Util.areEqual(adsConfiguration, other.adsConfiguration)
           && streamKeys.equals(other.streamKeys)
           && headers.equals(other.headers)
+          && Util.areEqual(username, other.username)
+          && Util.areEqual(password, other.password)
           && Util.areEqual(customCacheKey, other.customCacheKey)
           && subtitles.equals(other.subtitles)
           && Util.areEqual(tag, other.tag);
@@ -859,6 +885,8 @@ public final class MediaItem implements Bundleable {
       result = 31 * result + (adsConfiguration == null ? 0 : adsConfiguration.hashCode());
       result = 31 * result + streamKeys.hashCode();
       result = 31 * result + headers.hashCode();
+      result = 31 * result + (username == null ? 0 : username.hashCode());
+      result = 31 * result + (password == null ? 0 : password.hashCode());
       result = 31 * result + (customCacheKey == null ? 0 : customCacheKey.hashCode());
       result = 31 * result + subtitles.hashCode();
       result = 31 * result + (tag == null ? 0 : tag.hashCode());

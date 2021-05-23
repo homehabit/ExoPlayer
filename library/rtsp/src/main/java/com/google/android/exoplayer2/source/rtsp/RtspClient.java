@@ -44,6 +44,8 @@ import com.google.android.exoplayer2.ParserException;
 import com.google.android.exoplayer2.source.rtsp.RtspMediaPeriod.RtpLoadInfo;
 import com.google.android.exoplayer2.source.rtsp.RtspMediaSource.RtspPlaybackException;
 import com.google.android.exoplayer2.source.rtsp.RtspMessageUtil.RtspSessionHeader;
+import com.google.android.exoplayer2.source.rtsp.auth.Credentials;
+import com.google.android.exoplayer2.source.rtsp.auth.DigestCredentials;
 import com.google.android.exoplayer2.util.Util;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
@@ -103,6 +105,7 @@ import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
   private @MonotonicNonNull PlaybackEventListener playbackEventListener;
   @Nullable private String sessionId;
   @Nullable private KeepAliveMonitor keepAliveMonitor;
+  @Nullable private Credentials credentials;
   private boolean hasUpdatedTimelineAndTracks;
   private long pendingSeekPositionUs;
 
@@ -343,6 +346,17 @@ import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
     }
 
     private void sendRequest(RtspRequest request) {
+      if (credentials != null && request.headers.get(RtspHeaders.AUTHORIZATION) == null) {
+        String authorization = credentials.getAuthorizationToken(request.uri.toString(),
+          RtspMessageUtil.toMethodString(request.method), request.messageBody);
+
+        RtspHeaders.Builder headersBuilder = new RtspHeaders.Builder();
+        headersBuilder.addAll(request.headers.asMap());
+        headersBuilder.add(RtspHeaders.AUTHORIZATION, authorization);
+
+        request = new RtspRequest(request.uri, request.method, headersBuilder.build(), request.messageBody);
+      }
+
       int cSeq = Integer.parseInt(checkNotNull(request.headers.get(RtspHeaders.CSEQ)));
       checkState(pendingRequests.get(cSeq) == null);
       pendingRequests.append(cSeq, request);
@@ -367,7 +381,11 @@ import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
 
       @RtspRequest.Method int requestMethod = matchingRequest.method;
 
-      if (response.status != 200) {
+      if (response.status == 401) {
+        onUnauthorized(response, matchingRequest);
+        return;
+      }
+      else if (response.status != 200) {
         dispatchRtspError(
             new RtspPlaybackException(
                 RtspMessageUtil.toMethodString(requestMethod) + " " + response.status));
@@ -519,6 +537,31 @@ import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
 
     public void onUnsupportedResponseReceived(RtspResponse response) {
       // Do nothing.
+    }
+
+    private void onUnauthorized(RtspResponse response, RtspRequest request) {
+      try {
+        String digest = RtspMessageUtil.parseW3AuthenticateDigestHeader(response.headers.get(RtspHeaders.WWW_AUTHENTICATE));
+
+        credentials = new DigestCredentials.Builder(digest)
+            .setUsername(playbackProperties.username)
+            .setPassword(playbackProperties.password)
+            .setParam(DigestCredentials.URI, playbackProperties.uri.toString())
+            .build();
+
+        String authorization = credentials.getAuthorizationToken(request.uri.toString(),
+          RtspMessageUtil.toMethodString(request.method), request.messageBody);
+
+        RtspHeaders.Builder headersBuilder = new RtspHeaders.Builder();
+        headersBuilder.addAll(request.headers.asMap());
+        headersBuilder.add(RtspHeaders.AUTHORIZATION, authorization);
+        headersBuilder.add(RtspHeaders.CSEQ, String.valueOf(messageSender.cSeq++));
+
+        messageSender.sendRequest(new RtspRequest(request.uri, request.method, headersBuilder.build(), request.messageBody));
+      }
+      catch (ParserException e) {
+        dispatchRtspError(new RtspPlaybackException(e));
+      }
     }
 
     private void dispatchRtspError(Throwable error) {
