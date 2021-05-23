@@ -379,9 +379,11 @@ import java.lang.annotation.RetentionPolicy;
     String[] parameters = Util.split(fmtpComponents[1], ";\\s?");
     ImmutableMap.Builder<String, String> formatParametersBuilder = new ImmutableMap.Builder<>();
     for (String parameter : parameters) {
-      // The parameter values can bear equal signs, so splitAtFirst must be used.
-      String[] parameterPair = Util.splitAtFirst(parameter, "=");
-      formatParametersBuilder.put(parameterPair[0], parameterPair[1]);
+      if (!parameter.isEmpty()) {
+        // The parameter values can bear equal signs, so splitAtFirst must be used.
+        String[] parameterPair = Util.splitAtFirst(parameter, "=");
+        formatParametersBuilder.put(parameterPair[0], parameterPair[1]);
+      }
     }
     return formatParametersBuilder.build();
   }
