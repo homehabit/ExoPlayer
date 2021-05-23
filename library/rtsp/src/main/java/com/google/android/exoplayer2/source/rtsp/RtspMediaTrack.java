@@ -117,25 +117,25 @@ import com.google.common.collect.ImmutableMap;
     }
 
     ImmutableMap<String, String> fmtpParameters = mediaDescription.getFmtpParametersAsMap();
-    switch (mimeType) {
-      case MimeTypes.AUDIO_AAC:
-        checkArgument(channelCount != C.INDEX_UNSET);
-        checkArgument(!fmtpParameters.isEmpty());
-        processAacFmtpAttribute(formatBuilder, fmtpParameters, channelCount, clockRate);
-        break;
-      case MimeTypes.VIDEO_H264:
-        checkArgument(!fmtpParameters.isEmpty());
-        processH264FmtpAttribute(formatBuilder, fmtpParameters);
-        break;
-      case MimeTypes.AUDIO_AC3:
-        // AC3 does not require a FMTP attribute. Fall through.
-      default:
-        // Do nothing.
+    if (!fmtpParameters.isEmpty()) {
+      switch (mimeType) {
+        case MimeTypes.AUDIO_AAC:
+          checkArgument(channelCount != C.INDEX_UNSET);
+          processAacFmtpAttribute(formatBuilder, fmtpParameters, channelCount, clockRate);
+          break;
+        case MimeTypes.VIDEO_H264:
+          processH264FmtpAttribute(formatBuilder, fmtpParameters);
+          break;
+        case MimeTypes.AUDIO_AC3:
+          // AC3 does not require a FMTP attribute. Fall through.
+        default:
+          // Do nothing.
+      }
     }
 
     checkArgument(clockRate > 0);
     // Checks if payload type is "dynamic" as defined in RFC3551 Section 3.
-    checkArgument(rtpPayloadType >= 96);
+    //checkArgument(rtpPayloadType >= 96);
     return new RtpPayloadFormat(formatBuilder.build(), rtpPayloadType, clockRate, fmtpParameters);
   }
 

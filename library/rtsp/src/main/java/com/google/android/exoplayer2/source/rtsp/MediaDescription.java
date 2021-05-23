@@ -195,13 +195,7 @@ import java.lang.annotation.RetentionPolicy;
      *     cannot be parsed.
      */
     public MediaDescription build() {
-      ImmutableMap<String, String> attributes = attributesBuilder.build();
-
-      // fallback rtpmap attribute for audio tracks
-      if (mediaType.equals("audio") && !attributes.containsKey(ATTR_RTPMAP)) {
-        attributesBuilder.put(ATTR_RTPMAP, "0 PCMU/8000");
-        attributes = attributesBuilder.build();
-      }
+      ImmutableMap<String, String> attributes = buildAttributes();
 
       try {
         // rtpmap attribute is mandatory in RTSP (RFC2326 Section C.1.3).
@@ -212,6 +206,66 @@ import java.lang.annotation.RetentionPolicy;
       } catch (ParserException e) {
         throw new IllegalStateException(e);
       }
+    }
+
+    private ImmutableMap<String, String> buildAttributes() {
+      ImmutableMap<String, String> attributes = attributesBuilder.build();
+
+      if (!attributes.containsKey(ATTR_RTPMAP)) {
+        switch (payloadType) {
+          case 0:
+            attributesBuilder.put(ATTR_RTPMAP, "0 PCMU/8000");
+            bitrate = (bitrate == -1) ? 64 : bitrate;
+            break;
+
+          case 3:
+            attributesBuilder.put(ATTR_RTPMAP, "3 GSM/8000");
+            break;
+
+          case 8:
+            attributesBuilder.put(ATTR_RTPMAP, "8 PCMA/8000");
+            bitrate = (bitrate == -1) ? 64 : bitrate;
+            break;
+
+          case 9:
+            attributesBuilder.put(ATTR_RTPMAP, "9 G722/8000");
+            break;
+
+          case 10:
+            attributesBuilder.put(ATTR_RTPMAP, "10 L16/44100");
+            break;
+
+          case 11:
+            attributesBuilder.put(ATTR_RTPMAP, "11 L16/44100");
+            break;
+
+          case 14:
+            attributesBuilder.put(ATTR_RTPMAP, "14 MPA/90000");
+            break;
+
+          case 26:
+            attributesBuilder.put(ATTR_RTPMAP, "26 JPEG/90000");
+            break;
+
+          case 31:
+            attributesBuilder.put(ATTR_RTPMAP, "31 H261/90000");
+            break;
+
+          case 32:
+            attributesBuilder.put(ATTR_RTPMAP, "32 MPV/90000");
+            break;
+
+          case 33:
+            attributesBuilder.put(ATTR_RTPMAP, "33 MP2T/90000");
+            break;
+
+          case 34:
+            attributesBuilder.put(ATTR_RTPMAP, "34 H263/90000");
+            break;
+        }
+      }
+      
+      return attributesBuilder.build();
     }
   }
 
