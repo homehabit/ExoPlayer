@@ -117,20 +117,18 @@ import com.google.common.collect.ImmutableMap;
     }
 
     ImmutableMap<String, String> fmtpParameters = mediaDescription.getFmtpParametersAsMap();
-    if (!fmtpParameters.isEmpty()) {
-      switch (mimeType) {
-        case MimeTypes.AUDIO_AAC:
-          checkArgument(channelCount != C.INDEX_UNSET);
-          processAacFmtpAttribute(formatBuilder, fmtpParameters, channelCount, clockRate);
-          break;
-        case MimeTypes.VIDEO_H264:
-          processH264FmtpAttribute(formatBuilder, fmtpParameters);
-          break;
-        case MimeTypes.AUDIO_AC3:
-          // AC3 does not require a FMTP attribute. Fall through.
-        default:
-          // Do nothing.
-      }
+    switch (mimeType) {
+      case MimeTypes.AUDIO_AAC:
+        checkArgument(channelCount != C.INDEX_UNSET);
+        processAacFmtpAttribute(formatBuilder, fmtpParameters, channelCount, clockRate);
+        break;
+      case MimeTypes.VIDEO_H264:
+        processH264FmtpAttribute(formatBuilder, fmtpParameters);
+        break;
+      case MimeTypes.AUDIO_AC3:
+        // AC3 does not require a FMTP attribute. Fall through.
+      default:
+        // Do nothing.
     }
 
     checkArgument(clockRate > 0);
@@ -160,9 +158,11 @@ import com.google.common.collect.ImmutableMap;
       ImmutableMap<String, String> fmtpAttributes,
       int channelCount,
       int sampleRate) {
-    checkArgument(fmtpAttributes.containsKey(PARAMETER_PROFILE_LEVEL_ID));
-    String profileLevel = checkNotNull(fmtpAttributes.get(PARAMETER_PROFILE_LEVEL_ID));
-    formatBuilder.setCodecs(AAC_CODECS_PREFIX + profileLevel);
+    if (fmtpAttributes.containsKey(PARAMETER_PROFILE_LEVEL_ID)) {
+      String profileLevel = checkNotNull(fmtpAttributes.get(PARAMETER_PROFILE_LEVEL_ID));
+      formatBuilder.setCodecs(AAC_CODECS_PREFIX + profileLevel);
+    }
+
     formatBuilder.setInitializationData(
         ImmutableList.of(
             // Clock rate equals to sample rate in RTP.
@@ -171,28 +171,30 @@ import com.google.common.collect.ImmutableMap;
 
   private static void processH264FmtpAttribute(
       Format.Builder formatBuilder, ImmutableMap<String, String> fmtpAttributes) {
-    checkArgument(fmtpAttributes.containsKey(PARAMETER_PROFILE_LEVEL_ID));
-    String profileLevel = checkNotNull(fmtpAttributes.get(PARAMETER_PROFILE_LEVEL_ID));
-    formatBuilder.setCodecs(H264_CODECS_PREFIX + profileLevel);
+    if (fmtpAttributes.containsKey(PARAMETER_PROFILE_LEVEL_ID)) {
+      String profileLevel = checkNotNull(fmtpAttributes.get(PARAMETER_PROFILE_LEVEL_ID));
+      formatBuilder.setCodecs(H264_CODECS_PREFIX + profileLevel);
+    }
 
-    checkArgument(fmtpAttributes.containsKey(PARAMETER_SPROP_PARAMS));
-    String spropParameterSets = checkNotNull(fmtpAttributes.get(PARAMETER_SPROP_PARAMS));
-    String[] parameterSets = Util.split(spropParameterSets, ",");
-    checkArgument(parameterSets.length == 2);
-    ImmutableList<byte[]> initializationData =
-        ImmutableList.of(
-            getH264InitializationDataFromParameterSet(parameterSets[0]),
-            getH264InitializationDataFromParameterSet(parameterSets[1]));
-    formatBuilder.setInitializationData(initializationData);
+    if (fmtpAttributes.containsKey(PARAMETER_SPROP_PARAMS)) {
+      String spropParameterSets = checkNotNull(fmtpAttributes.get(PARAMETER_SPROP_PARAMS));
+      String[] parameterSets = Util.split(spropParameterSets, ",");
+      checkArgument(parameterSets.length == 2);
+      ImmutableList<byte[]> initializationData =
+          ImmutableList.of(
+              getH264InitializationDataFromParameterSet(parameterSets[0]),
+              getH264InitializationDataFromParameterSet(parameterSets[1]));
+      formatBuilder.setInitializationData(initializationData);
 
-    // Process SPS (Sequence Parameter Set).
-    byte[] spsNalDataWithStartCode = initializationData.get(0);
-    NalUnitUtil.SpsData spsData =
-        NalUnitUtil.parseSpsNalUnit(
-            spsNalDataWithStartCode, NAL_START_CODE.length, spsNalDataWithStartCode.length);
-    formatBuilder.setPixelWidthHeightRatio(spsData.pixelWidthAspectRatio);
-    formatBuilder.setHeight(spsData.height);
-    formatBuilder.setWidth(spsData.width);
+      // Process SPS (Sequence Parameter Set).
+      byte[] spsNalDataWithStartCode = initializationData.get(0);
+      NalUnitUtil.SpsData spsData =
+          NalUnitUtil.parseSpsNalUnit(
+              spsNalDataWithStartCode, NAL_START_CODE.length, spsNalDataWithStartCode.length);
+      formatBuilder.setPixelWidthHeightRatio(spsData.pixelWidthAspectRatio);
+      formatBuilder.setHeight(spsData.height);
+      formatBuilder.setWidth(spsData.width);
+    }
   }
 
   private static byte[] getH264InitializationDataFromParameterSet(String parameterSet) {
