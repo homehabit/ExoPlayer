@@ -53,6 +53,7 @@ import java.io.Closeable;
 import java.io.IOException;
 import java.net.Socket;
 import java.util.ArrayDeque;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import javax.net.SocketFactory;
@@ -552,12 +553,17 @@ import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
         String authorization = credentials.getAuthorizationToken(request.uri.toString(),
           RtspMessageUtil.toMethodString(request.method), request.messageBody);
 
-        RtspHeaders.Builder headersBuilder = new RtspHeaders.Builder();
-        headersBuilder.addAll(request.headers.asMap());
-        headersBuilder.add(RtspHeaders.AUTHORIZATION, authorization);
-        headersBuilder.add(RtspHeaders.CSEQ, String.valueOf(messageSender.cSeq++));
+        Map<String, String> requestHeaders = new LinkedHashMap<>(request.headers.asMap());
+        requestHeaders.remove(RtspHeaders.AUTHORIZATION);
+        requestHeaders.remove(RtspHeaders.CSEQ);
 
-        messageSender.sendRequest(new RtspRequest(request.uri, request.method, headersBuilder.build(), request.messageBody));
+        RtspHeaders headers = new RtspHeaders.Builder()
+          .addAll(requestHeaders)
+          .add(RtspHeaders.AUTHORIZATION, authorization)
+          .add(RtspHeaders.CSEQ, String.valueOf(messageSender.cSeq++))
+          .build();
+
+        messageSender.sendRequest(new RtspRequest(request.uri, request.method, headers, request.messageBody));
       }
       catch (ParserException e) {
         dispatchRtspError(new RtspPlaybackException(e));
