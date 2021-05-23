@@ -196,6 +196,13 @@ import java.lang.annotation.RetentionPolicy;
      */
     public MediaDescription build() {
       ImmutableMap<String, String> attributes = attributesBuilder.build();
+
+      // fallback rtpmap attribute for audio tracks
+      if (mediaType.equals("audio") && !attributes.containsKey(ATTR_RTPMAP)) {
+        attributesBuilder.put(ATTR_RTPMAP, "0 PCMU/8000");
+        attributes = attributesBuilder.build();
+      }
+
       try {
         // rtpmap attribute is mandatory in RTSP (RFC2326 Section C.1.3).
         checkState(attributes.containsKey(ATTR_RTPMAP));
